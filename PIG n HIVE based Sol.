@@ -1,0 +1,130 @@
+
+Q1 Find out the frequency of books published each year. (Hint: Use Boooks.csv file for this)
+Answer : PFA Bookfreq_answer1.csv 
+
+############# Code ,Implemented in PIG #####################
+
+###lOAD DATA TO HDFS ###
+
+hdfs dfs -copyFromLocal /home/edureka/Hadoop/BX-Books.csv books.csv
+
+
+### PIG Code ###
+pig
+
+books = LOAD 'books.csv' AS line;
+A = FOREACH books GENERATE FLATTEN(REGEX_EXTRACT_ALL(line,'(.*)\\"\\;\\"(.*)\\"\\;\\"(.*)\\"\\;\\"(.*)\\"\\;\\"(.*)\\"\\;\\"(.*)\\"\\;\\"(.*)\\"\\;\\"(.*)')) AS (isbn,title,author,year,publisher,urls,urlm,urll);
+
+illustrate A;
+
+store A into 'bookall.csv' using PigStorage('*');
+
+B = Group A by year;
+illustrate B;
+
+C = FOREACH B GENERATE group, COUNT(A);
+illustrate C;
+
+store C into 'bookfreq' USING PigStorage(',');
+############################ Code Finishes ######################################
+
+
+
+
+
+
+
+
+
+
+
+
+Q2 Find out in which year maximum number of books were published
+Answer : 2002
+
+
+################## Code in HIVE #############################
+create database proj;
+
+USE proj;
+
+drop table yearfreq;
+create table yearfreq (year int,freq int) ROW FORMAT DELIMITED FIELDS TERMINATED BY ',' stored as textfile ;
+
+LOAD DATA INPATH '/user/edureka/bookfreq/part-r-00000' INTO TABLE yearfreq;
+
+select max(freq) from yearfreq ;
+#17628
+
+select year from yearfreq where freq = 17628 ;
+#2002
+
+######################CODE Finishes##########################################
+
+
+
+
+
+
+
+
+Q3 Find out how many book were published based on ranking in the year 2002.­ ( Hint: Use Book.csv and Book-Ratings.csv)
+Answer : 17538 (Found with LEFT INNER JOIN of book_ratings.csv with book.csv on unique isbn)
+
+
+
+
+################## Code in PIG and HIVE #############################
+
+### PIG ###
+books = LOAD 'books.csv' AS line;
+A = FOREACH books GENERATE FLATTEN(REGEX_EXTRACT_ALL(line,'(.*)\\"\\;\\"(.*)\\"\\;\\"(.*)\\"\\;\\"(.*)\\"\\;\\"(.*)\\"\\;\\"(.*)\\"\\;\\"(.*)\\"\\;\\"(.*)')) AS (isbn,title,author,year,publisher,urls,urlm,urll);
+
+illustrate A;
+
+store A into 'bookall.csv' using PigStorage('*');
+
+
+rate = LOAD '/user/hive/warehouse/proj.db/bookrate/BX-Book-Ratings.csv' AS line;
+illustrate rate;
+
+A = FOREACH rate GENERATE FLATTEN(REGEX_EXTRACT_ALL(line,'(.*)\\"\\;\\"(.*)\\"\\;\\"(.*)')) AS (user,isbn,rating);
+illustrate A;
+
+
+store A into pigbrate using PigStorage(',');
+###PIG code finished ###
+
+###HIVE###
+
+drop table bookall;
+create table bookall (isbn varchar(20),title varchar(20),author varchar(20),year varchar(20), publisher varchar(20),urls varchar(20),urlm varchar(20),urll varchar(20)
+) ROW FORMAT DELIMITED FIELDS TERMINATED BY '*' stored as textfile;
+
+LOAD DATA  INPATH '/user/edureka/bookall.csv/part-m-00000' into table bookall ;
+
+
+drop table bookrate;
+create table bookrate (user varchar(20),isbn varchar(20),rating varchar(20)) ROW FORMAT DELIMITED FIELDS TERMINATED BY ',' stored as textfile;
+
+LOAD DATA  INPATH '/user/edureka/pigbrate' into table bookrate ;
+
+
+### Fnd '"' before isbn in book all , handled as per the following ###
+create table bkall as select substr(isbn,2) as isbn,year from bookall;
+create table bkrt as select isbn from bookrate;
+
+create table bkrtall as select bkrt.isbn as isbn , bkall.year as year from bkrt LEFT JOIN bkall ON (bkrt.isbn=bkall.isbn);
+
+create table stats as  select isbn,year,count(isbn) as cntisbn from bkrtall group by isbn,year;
+
+select count(isbn) from stats where year = 2002;
+#17538
+
+
+### HIVE code Finishes ###
+################## Code in PIG and HIVE finishes #############################
+
+
+
+
