@@ -1,0 +1,10 @@
+## Question Statement##
+
+Two datasets:
+Student: This dataset contains name and roll number of students in a class
+Results: This dataset contains roll number and result (Fail or Pass) of students
+
+Problem statement
+Pig script to analyse and store the student names who are successful.
+
+################################################################################
