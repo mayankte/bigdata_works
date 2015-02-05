@@ -1,0 +1,60 @@
+ --################# Implemented as a grunt shell script ###########################
+ --#################File Name : script.pig##########################################
+
+ -- ## Load student Data from HDFS to PIG Shell ##
+stu = LOAD 'student' USING PigStorage('\t') AS (name:chararray , roll_no : int);
+ -- dump stu;
+
+
+ -- ## Load Result Data from HDFS to PIG Shell ##
+res = LOAD 'results' USING PigStorage('\t') AS (roll_no : int , result  : chararray);
+ -- dump res;
+
+
+ -- ## Join by Roll no. as Foreign key to get Results for Student ##
+jo = JOIN stu BY roll_no,res BY roll_no;
+ -- illustrate jo;
+
+
+ -- ## Filter to get the List of Passed Students ##
+chkpass = FILTER jo BY result == 'pass';
+ -- dump chkpass;
+
+
+ -- ## Filter to get the List of Failed Students ##
+chkfail = FILTER jo BY result == 'fail';
+ -- dump chkfail;
+
+
+ -- ### Grp BY before count for Failed student #####
+grpfail = GROUP chkfail BY result;
+
+
+ -- ### Store the list of Failed Students back to HDFS #####
+STORE grpfail INTO 'grpfail' USING PigStorage('*');
+ -- dump grpfail;
+
+
+ -- #### Fail Count ######
+cntfail = FOREACH grpfail GENERATE COUNT(chkfail);
+
+
+ -- ### Store the Count of Failed Students back to HDFS #####
+STORE cntfail INTO 'failcnt';
+
+ -- ### Grp BY before count for Passed Student #####
+grppass = GROUP chkpass BY result;
+
+
+ -- ### Store the list of Passed Students back to HDFS #####
+STORE grppass INTO 'grppass' USING PigStorage('*');
+ -- dump grppass;
+
+
+ -- #### Pass Count ######
+cntpass = FOREACH grppass GENERATE COUNT(chkpass);
+
+
+ -- ### Store the Count of Passed Students back to HDFS #####
+STORE cntpass INTO 'passcnt';
+
